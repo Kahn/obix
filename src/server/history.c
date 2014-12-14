@@ -325,7 +325,7 @@ static err_msg_t hist_err_msg[] = {
 };
 
 /**
- * Write the index file, which will be re-written each time
+ * Write the index file. The whole index file will be re-written
  *
  * Return > 0 on success, < 0 otherwise
  */
@@ -340,12 +340,7 @@ static int write_index(const char *path, const char *data, int size)
 	iov[1].iov_base = (char *)data;
 	iov[1].iov_len = size;
 
-	/*
-	 * NOTE: no O_TRUNC option so that even if the write attempt failed
-	 * due to lack of disk space, the original content won't be erased
-	 * right at the time of open!
-	 */
-	if ((fd = open(path, O_RDWR)) >= 0) {
+	if ((fd = open(path, O_RDWR | O_TRUNC)) >= 0) {
 		ret = writev(fd, iov, 2);
 		close(fd);
 	}
@@ -1788,54 +1783,12 @@ void obix_hist_dispose(void)
 	_history = NULL;
 }
 
-/*
- * All history irrelevant but possibly existing sub folders
- * under the histories/ folder are enumerated here, they are
- * skipped over during initialisation
- *
- * NOTE: there is no need to list regular files that may exist
- * under histhories/ folder since they are ignored by default
- */
-static const char *skipped_dirs[] = {
-	"lost+found",
-	NULL
-};
-
-static int is_skipped_dir(const char *dir)
-{
-	int i;
-
-	for (i = 0; skipped_dirs[i]; i++) {
-		if (strcmp(dir, skipped_dirs[i]) == 0) {
-			return 1;
-		}
-	}
-
-	/* Not on the black-list */
-	return 0;
-}
-
 static int hist_create_dev_wrapper(const char *parent_dir, const char *subdir,
 								   void *arg)	/* ignored */
 {
 	obix_hist_dev_t *dev;
-	struct stat statbuf;
-	char *indexpath, *path;
+	char *indexpath;
 	int ret = 0;
-
-	if (link_pathname(&path, parent_dir, subdir, NULL, NULL) < 0) {
-		return -1;
-	}
-
-	/* Skip over non-folder files, buggy or irrelevant sub folders */
-	if (lstat(path, &statbuf) < 0 ||
-		S_ISDIR(statbuf.st_mode) == 0 ||
-		is_skipped_dir(subdir) == 1) {
-		free(path);
-		log_debug("Skipping history irrelevant file: %s", subdir);
-		return 0;
-	}
-	free(path);
 
 	if (link_pathname(&indexpath, parent_dir, subdir,
 					  INDEX_FILENAME, INDEX_FILENAME_SUFFIX) < 0) {
@@ -1925,7 +1878,7 @@ static int create_dev_helper(const char *dev_id,
 							 obix_hist_dev_t **dev)
 {
 	char *devdir, *indexpath;
-	int ret = ERR_NO_PERM;
+	int ret = ERR_NO_MEM;
 
 	*dev = NULL;
 
@@ -1935,23 +1888,13 @@ static int create_dev_helper(const char *dev_id,
 		goto failed;
 	}
 
-	errno = 0;
 	if (mkdir(devdir, 0755) < 0) {
-		log_error("Failed to mkdir %s because of %s", devdir,
-				  strerror(errno));
-		if (errno == EDQUOT || errno == ENOMEM || errno == ENOSPC) {
-			ret = ERR_NO_MEM;
-		}
+		ret = ERR_NO_PERM;
 		goto failed;
 	}
 
-	errno = 0;
 	if (creat(indexpath, 0644) < 0) {
-		log_error("Failed to creat %s because of %s", indexpath,
-				  strerror(errno));
-		if (errno == EDQUOT || errno == ENOMEM || errno == ENOSPC) {
-			ret = ERR_NO_MEM;
-		}
+		ret = ERR_NO_PERM;
 		goto creat_failed;
 	}
 

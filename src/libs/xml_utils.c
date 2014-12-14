@@ -322,9 +322,15 @@ ctx_failed:
 
 /**
  * Helper function to find a direct child with matching tag
- * that has the specified attribute.
+ * that has the specified attribute. If the val parameter is
+ * not NULL, the value of that attribute must be the same
+ * as val.
  *
- * NOTE: for sake of performance, oBIX server should strive to establish
+ * If @a tag points to NULL, no comparison on the tag name is
+ * performed (ie. it's ignored).
+ *
+ * Note,
+ * 1. For sake of performance, oBIX server should strive to establish
  * a hierarchy organization of all XML objects, the global DOM tree
  * should strike a proper balance among its depth and width. If too
  * many direct children organized directly under one same parent,
@@ -334,29 +340,24 @@ xmlNode *xml_find_child(const xmlNode *parent, const char *tag,
 						const char *attrName, const char *attrVal)
 {
 	xmlNode *node;
-	xmlChar *attr_val = NULL;
+	xmlChar *attr_val;
 	int ret;
 
-	/* Callers must specify at least one of tag and attrName */
-	if (!parent || (!attrName && !tag)) {
+	if (!parent || !attrName) {		/* attrVal, tag are optional */
 		return NULL;
 	}
 
 	for (node = parent->children; node; node = node->next) {
 		if (node->type != XML_ELEMENT_NODE) {
-			continue;			/* only interested in normal nodes */
+			continue;		/* only interested in normal nodes */
 		}
 
-		if (tag && xmlStrcmp(node->name, BAD_CAST tag) != 0) {
-			continue;			/* tag not matching */
-		}
-
-		if (!attrName) {		/* no need to worry about the attribute at all */
-			return node;
+		if (tag != NULL && xmlStrcmp(node->name, BAD_CAST tag) != 0) {
+			continue;		/* tag not matching */
 		}
 
 		if (!(attr_val = xmlGetProp(node, BAD_CAST attrName))) {
-			continue;			/* no specified attribute */
+			continue;		/* no specified attribute */
 		}
 
 		if (!attrVal) {			/* no need to compare attr's value */
@@ -368,7 +369,7 @@ xmlNode *xml_find_child(const xmlNode *parent, const char *tag,
 		xmlFree(attr_val);
 
 		if (ret == 0) {
-			return node;		/* Found */
+			return node;	/* Found */
 		}
 	}
 
@@ -426,13 +427,11 @@ char *xml_get_child_val(const xmlNode *parent, const char *tag,
 {
 	xmlNode *node;
 
-	if (nameVal) {
-		node = xml_find_child(parent, tag, OBIX_ATTR_NAME, nameVal);
-	} else {
-		node = xml_find_child(parent, tag, NULL, NULL);
+	if (!(node = xml_find_child(parent, tag, OBIX_ATTR_NAME, nameVal))) {
+		return NULL;
 	}
 
-	return (node) ? (char *)xmlGetProp(node, BAD_CAST OBIX_ATTR_VAL) : NULL;
+	return (char *)xmlGetProp(node, BAD_CAST OBIX_ATTR_VAL);
 }
 
 /**

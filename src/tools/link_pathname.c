@@ -1,5 +1,4 @@
 /*
- * *******************************************************************
  * Copyright (c) 2014 Qingtao Cao [harry.cao@nextdc.com]
  *
  * This file is part of oBIX.
@@ -15,7 +14,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with oBIX. If not, see <http://www.gnu.org/licenses/>.
+ * along with oBIX.  If not, see <http://www.gnu.org/licenses/>.
  *
  * *******************************************************************
  */
