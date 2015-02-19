@@ -1,5 +1,7 @@
 # oBIX
 
+(NOTE: this ONEDC/oBIX repository is **no longer** maintained, the recent bug-fixes and new features such as the Device subsystem, persistent device files and the multi-thread support of the oBIX server are in my sandbox - Qingtao Cao, 2015-2-19)
+
 Providing oBIX Server and client implementation for C language
  
 Copyright (c) 2014 Tyler Watson [tyler.watson@nextdc.com]    
